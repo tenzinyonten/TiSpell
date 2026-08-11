@@ -1,0 +1,13 @@
+dataset/
+weights/
+pretrained_models/
+exports/
+venv/
+__pycache__/
+*.pyc
+*.pth
+*.safetensors
+*.csv
+*.parquet
+.DS_Store
+wandb/
