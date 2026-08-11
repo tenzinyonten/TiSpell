@@ -39,6 +39,13 @@ def _mean_token_loss(logits, targets, attention_mask, pad_id: int):
     return (loss * mask).sum(dim=1) / denom
 
 
+def save_checkpoint(model, tokenizer, checkpoint_dir: str):
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    model.roberta.save_pretrained(checkpoint_dir)
+    tokenizer.save_pretrained(checkpoint_dir)
+    torch.save(model.state_dict(), os.path.join(checkpoint_dir, "tispell_roberta.pth"))
+
+
 def train(args, model, train_loader, optimizer, lr_scheduler, device, pad_id: int):
     model.train()
     total_loss = 0.0
@@ -147,10 +154,6 @@ def validation(model, test_loader, tokenizer, device, epoch, results_per_epoch):
                 if metric_name != "count":
                     wandb.log({f"val/{key}_{metric_name}": value}, step=epoch)
 
-    os.makedirs("weights/tispell_roberta", exist_ok=True)
-    model.roberta.save_pretrained("weights/tispell_roberta")
-    tokenizer.save_pretrained("weights/tispell_roberta")
-    torch.save(model.state_dict(), "weights/tispell_roberta/tispell_roberta.pth")
     return results_per_epoch
 
 
@@ -169,6 +172,8 @@ def main():
                 "language": "Tibetan",
                 "hidden_size": args.hidden_size,
                 "learning_rate": args.learning_rate,
+                "dropout": args.dropout,
+                "patience": args.patience,
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
                 "subset": args.subset,
@@ -187,8 +192,13 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token
     pad_id = tokenizer.pad_token_id
 
-    model = TiSpell_RoBERTa(args.model_name, tokenizer)
+    model = TiSpell_RoBERTa(args.model_name, tokenizer, dropout=args.dropout)
     model.to(device)
+    print(
+        f"Encoder dropout: hidden={model.config.hidden_dropout_prob}  "
+        f"attention={model.config.attention_probs_dropout_prob}"
+    )
+    print(f"Learning rate: {args.learning_rate}  patience: {args.patience}")
 
     train_dataset = OCRAnnotationDataset(args, tokenizer, split="train")
     val_dataset = OCRAnnotationDataset(args, tokenizer, split="val")
@@ -218,6 +228,10 @@ def main():
     )
 
     results_per_epoch = {}
+    best_f1 = float("-inf")
+    best_epoch = None
+    epochs_without_improvement = 0
+
     for epoch in range(args.epochs):
         print(f"Epoch {epoch + 1}/{args.epochs}")
         train_loss, n_steps = train(
@@ -231,10 +245,44 @@ def main():
             results_per_epoch = validation(
                 model, val_loader, tokenizer, device, epoch, results_per_epoch
             )
+            overall_f1 = results_per_epoch[epoch]["overall"]["f1"]
+            if overall_f1 > best_f1:
+                best_f1 = overall_f1
+                best_epoch = epoch + 1  # 1-indexed for reporting
+                epochs_without_improvement = 0
+                save_checkpoint(model, tokenizer, args.best_checkpoint_dir)
+                print(
+                    f"New best val F1={best_f1:.4f} at epoch {best_epoch} "
+                    f"→ saved to {args.best_checkpoint_dir}"
+                )
+                if args.use_wandb and wandb is not None:
+                    wandb.log(
+                        {"val/best_f1": best_f1, "val/best_epoch": best_epoch},
+                        step=epoch,
+                    )
+            else:
+                epochs_without_improvement += 1
+                print(
+                    f"No val-F1 improvement "
+                    f"({epochs_without_improvement}/{args.patience}); "
+                    f"best remains epoch {best_epoch} F1={best_f1:.4f}"
+                )
+                if epochs_without_improvement >= args.patience:
+                    print(
+                        f"Early stopping at epoch {epoch + 1} "
+                        f"(patience={args.patience})"
+                    )
+                    break
 
         if args.max_train_steps and args.max_train_steps > 0:
             # Smoke / short runs: one partial epoch is enough.
             break
+
+    if best_epoch is not None:
+        print(f"\nBest epoch: {best_epoch}  val F1: {best_f1:.4f}")
+        print(f"Best checkpoint: {args.best_checkpoint_dir}")
+    else:
+        print("\nNo validation run completed; no best checkpoint saved.")
 
     if args.use_wandb and wandb is not None:
         wandb.finish()

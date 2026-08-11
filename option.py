@@ -81,7 +81,28 @@ def parse_args():
         help="Number of epochs per evaluation",
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=5e-5, help="Learning rate"
+        "--learning_rate",
+        type=float,
+        default=2e-5,
+        help="Learning rate (default 2e-5; lower than the old 5e-5 to reduce overfitting)",
+    )
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=0.1,
+        help="Encoder hidden_dropout_prob and attention_probs_dropout_prob",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=3,
+        help="Early-stop after this many evals without validation-F1 improvement",
+    )
+    parser.add_argument(
+        "--best_checkpoint_dir",
+        type=str,
+        default="weights/tispell_roberta_best",
+        help="Directory for the best-by-val-F1 checkpoint (not overwritten each epoch)",
     )
     parser.add_argument(
         "--weight_decay", type=float, default=1e-2, help="Weight decay"

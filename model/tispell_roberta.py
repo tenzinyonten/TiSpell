@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoConfig
@@ -18,12 +20,16 @@ class DownStreamer(nn.Module):
     
     
 class TiSpell_RoBERTa(nn.Module):
-    def __init__(self, model_name, tokenizer):
+    def __init__(self, model_name, tokenizer, dropout: Optional[float] = None):
         super(TiSpell_RoBERTa, self).__init__()
         # MaskedLM backbone (openpecha/tibetan_RoBERTa_*); CausalLM also loads but
         # emits decoder warnings. Logits feed the dual corrector heads.
+        config = AutoConfig.from_pretrained(model_name)
+        if dropout is not None:
+            config.hidden_dropout_prob = dropout
+            config.attention_probs_dropout_prob = dropout
         self.roberta = AutoModelForCausalLM.from_pretrained(
-            model_name, attn_implementation="eager"
+            model_name, config=config, attn_implementation="eager"
         )
         self.vocab_size = len(tokenizer)
         self.roberta.resize_token_embeddings(self.vocab_size)
