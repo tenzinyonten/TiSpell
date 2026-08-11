@@ -5,7 +5,8 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from transformers import AdamW, get_scheduler, AutoTokenizer
+from torch.optim import AdamW
+from transformers import get_scheduler, AutoTokenizer
 from tqdm import tqdm
 
 from option import parse_args
