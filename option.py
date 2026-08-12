@@ -40,6 +40,15 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--exclude_categories",
+        type=str,
+        default="",
+        help=(
+            "Comma-separated diff_category values to drop from the train split "
+            "only (val/test unchanged). Example: large_rewrite"
+        ),
+    )
+    parser.add_argument(
         "--max_char_length",
         type=int,
         default=380,

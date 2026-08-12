@@ -93,6 +93,28 @@ class OCRAnnotationDataset(Dataset):
         diff = _cap(diff)
         ident = _cap(ident)
 
+        # Train-only: drop listed diff_category values (val/test untouched).
+        exclude_raw = getattr(args, "exclude_categories", "") or ""
+        exclude = {c.strip() for c in str(exclude_raw).split(",") if c.strip()}
+        if split == "train" and exclude:
+            before = len(diff)
+            dropped = diff[diff["diff_category"].astype(str).isin(exclude)]
+            n_excluded = len(dropped)
+            by_cat = dropped["diff_category"].astype(str).value_counts().to_dict()
+            unknown = sorted(exclude - set(diff["diff_category"].astype(str).unique()) - set(by_cat))
+            diff = diff[~diff["diff_category"].astype(str).isin(exclude)].reset_index(
+                drop=True
+            )
+            print(
+                f"OCRAnnotationDataset split=train: excluded {n_excluded} pairs "
+                f"by --exclude_categories={sorted(exclude)} "
+                f"(remaining differing={len(diff)} of {before})"
+            )
+            if by_cat:
+                print(f"  excluded by category: {by_cat}")
+            if unknown:
+                print(f"  categories not present in train differing: {unknown}")
+
         identical_ratio = float(getattr(args, "identical_ratio", 1.0))
         if split == "train":
             n_ident_before = len(ident)
@@ -106,6 +128,18 @@ class OCRAnnotationDataset(Dataset):
                 f"(target ratio={identical_ratio:.2f}, actual={ratio_actual:.3f}); "
                 f"differing={n_diff}, total={len(df)}"
             )
+            # Final train composition after exclude + identical subsample.
+            comp = (
+                df["diff_category"]
+                .astype(str)
+                .value_counts()
+                .rename_axis("diff_category")
+                .reset_index(name="count")
+            )
+            print("OCRAnnotationDataset split=train composition:")
+            for _, row in comp.iterrows():
+                cat, n = row["diff_category"], int(row["count"])
+                print(f"  {cat:<28} {n:7d}  ({100 * n / max(len(df), 1):5.2f}%)")
         else:
             # Val / test: keep all identical pairs.
             df = pd.concat([diff, ident], ignore_index=True)
