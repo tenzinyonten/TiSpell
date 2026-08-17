@@ -11,3 +11,5 @@ __pycache__/
 *.parquet
 .DS_Store
 wandb/
+*.log
+dataset/synthetic_v1/
