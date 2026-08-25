@@ -20,21 +20,6 @@ except ImportError:  # pragma: no cover
     wandb = None
 
 
-def _mean_token_nll(log_probs, targets, attention_mask, pad_id: int):
-    """Same masking as _mean_token_loss, but the model now emits
-    log-probabilities (copy gate mixes in probability space), so this uses
-    nll_loss rather than cross_entropy."""
-    loss = torch.nn.functional.nll_loss(
-        log_probs.transpose(1, 2), targets, reduction="none"
-    )
-    if attention_mask is None:
-        mask = (targets != pad_id).float()
-    else:
-        mask = attention_mask.float() * (targets != pad_id).float()
-    denom = mask.sum(dim=1).clamp(min=1.0)
-    return (loss * mask).sum(dim=1) / denom
-
-
 def _mean_token_loss(logits, targets, attention_mask, pad_id: int):
     """Per-sample mean CE over non-pad tokens. logits: [B, L, V], targets: [B, L]."""
     bsz, seqlen, vocab = logits.shape
@@ -74,15 +59,17 @@ def train(args, model, train_loader, optimizer, lr_scheduler, device, pad_id: in
         source_attention_mask = batch["random_corrupt"]["attention_mask"].to(device)
         target_tag_ids = batch["mask"]["input_ids"].to(device)
 
-        log_p, alpha = model(
+        logit, logit_c = model(
             source_input_ids, attention_mask=source_attention_mask
         )
 
-        # Single objective now: the copy gate handles "leave it alone",
-        # so the character head's separate loss is dropped.
-        loss = _mean_token_nll(
-            log_p, target_input_ids, target_attention, pad_id
-        ).mean()
+        loss_tok = _mean_token_loss(
+            logit, target_input_ids, target_attention, pad_id
+        )
+        loss_c_tok = _mean_token_loss(
+            logit_c, target_tag_ids, target_attention, pad_id
+        )
+        loss = (loss_tok + args.w_c * loss_c_tok).mean()
 
         optimizer.zero_grad()
         loss.backward()

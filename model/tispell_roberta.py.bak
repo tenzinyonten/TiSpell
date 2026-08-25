@@ -38,37 +38,14 @@ class TiSpell_RoBERTa(nn.Module):
         hidden = self.config.hidden_size
         self.character_corrector = DownStreamer(hidden, self.vocab_size)
         self.syllable_corrector = DownStreamer(hidden, self.vocab_size)
-        # Copy gate: per-position scalar deciding generate vs. copy input.
-        # Init bias high so training starts near "copy everything", which is
-        # the no-op baseline - the model then learns where editing pays.
-        self.copy_gate = nn.Linear(hidden, 1)
-        nn.init.zeros_(self.copy_gate.weight)
-        nn.init.constant_(self.copy_gate.bias, -2.0)   # sigmoid(-2) ~ 0.12
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None):
-        outputs = self.roberta(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            output_hidden_states=True,
-        )
+        outputs = self.roberta(input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
         hidden_states = outputs.logits
         logit_c = self.character_corrector(hidden_states)
         logit_s = self.syllable_corrector(hidden_states)
         logit = logit_c + logit_s
-
-        # Mix the generated distribution with a point mass on the input token.
-        enc = outputs.hidden_states[-1]                      # [B, T, H]
-        alpha = torch.sigmoid(self.copy_gate(enc))           # [B, T, 1]
-        p_vocab = torch.softmax(logit, dim=-1)
-        p_copy = torch.zeros_like(p_vocab)
-        p_copy.scatter_(2, input_ids.unsqueeze(-1), 1.0)
-        p = alpha * p_vocab + (1.0 - alpha) * p_copy
-        log_p = torch.log(p.clamp_min(1e-10))
-
-        # log_p replaces logits: argmax is unchanged, but the loss must be
-        # nll_loss rather than cross_entropy. alpha returned for logging.
-        return log_p, alpha
+        return logit, logit_c
     
 class TiSpell_RoBERTa_wo_Res(nn.Module):
     def __init__(self, model_name, tokenizer):

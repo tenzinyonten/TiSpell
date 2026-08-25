@@ -1,0 +1,124 @@
+Analysing 47,512 pairs
+
+========================================================================
+  EDIT OPERATIONS
+========================================================================
+  replace   :   52,092  (53.5%)
+  insert    :   27,226  (27.9%)
+  delete    :   18,102  (18.6%)
+
+========================================================================
+  TOP 30 CHARACTER SUBSTITUTIONS
+========================================================================
+  from   to        count   phonetic?  visual?
+  ----------------------------------------------
+  ོ      ེ         1,743   -          yes
+  ཊ      ཌ         1,115   -          -
+  ྰ      ཱ         1,102   -          -
+  བ      པ         1,033   yes        -
+  ང      ད           999   -          -
+  ད      ང           987   -          -
+  ས      པ           946   -          -
+  ེ      ོ           864   -          yes
+  ེ      ི           782   -          -
+  པ      བ           740   yes        -
+  ི      ེ           637   -          -
+  པ      ས           615   -          -
+  ར      ད           510   -          -
+  ས      ར           489   -          -
+  ང      ཌ           412   -          -
+  མ      ཾ           384   -          -
+  ར      ས           345   -          -
+  ྡ      ྟ           330   -          -
+  མ      ལ           327   -          -
+  ར      ང           317   -          -
+  ལ      མ           311   -          -
+  ཏ      ད           288   yes        -
+  ོ      ི           279   -          -
+  ད      ར           273   -          -
+  ྕ      ྩ           270   -          -
+  ྦ      ྤ           264   -          -
+  ི      ཾ           260   -          -
+  ས      ད           258   -          -
+  བ      ག           226   -          -
+  ང      ར           225   -          -
+
+========================================================================
+  PHONOLOGICAL vs VISUAL
+========================================================================
+
+  single-character substitutions : 33,963
+    same phonetic series          : 3,219  (9.5%)
+    visually confusable           : 3,482  (10.3%)
+    both                          : 136  (0.4%)
+    neither                       : 27,398
+
+  If the phonetic share dominates, the proposed homophone-based corruptions
+  match the real distribution. If the visual share dominates, the generated
+  data will not resemble the errors this corpus actually contains, and visual
+  confusion pairs should be added.
+
+  Caveat: these groupings are approximate, and many pairs are both phonetically
+  and visually close. Read the top-30 table above and judge it yourself rather
+  than relying on the percentages alone.
+
+========================================================================
+  WHAT GETS CONFUSED WITH WHAT (character classes)
+========================================================================
+  consonant    -> consonant      20,084
+  INSERTED     -> consonant       5,273
+  INSERTED     -> other           5,113
+  vowel        -> vowel           5,087
+  consonant    -> DELETED         4,436
+  INSERTED     -> vowel           4,219
+  vowel        -> DELETED         3,833
+  subjoined    -> subjoined       3,674
+  tsheg        -> DELETED         2,659
+  INSERTED     -> tsheg           2,586
+  other        -> DELETED         2,047
+  INSERTED     -> subjoined       1,880
+  subjoined    -> other           1,224
+  subjoined    -> DELETED         1,150
+  other        -> other             737
+
+========================================================================
+  TOP 25 SYLLABLE SUBSTITUTIONS
+========================================================================
+  ཡེེས             -> ཡཻས                  440
+  ས                -> པ                    327
+  བ                -> པ                    289
+  བའི              -> པའི                  242
+  སེསཾ             -> སེཾས                 214
+  པ                -> བ                    209
+  དྱལ              -> རྒྱལ                 193
+  ཧྰུཾ             -> ཧཱུཾ                 171
+  སངྱས             -> སདྱས                 144
+  པ                -> ས                    141
+  སོཊ              -> སོཌ                  131
+  པའི              -> བའི                  126
+  ཀྱི              -> ཀྱིས                 122
+  སློོན            -> སླཽན                 121
+  ཏུ               -> དུ                   119
+  བར               -> པར                   119
+  འཁོོར            -> འཁཽར                 116
+  དྱས              -> རྒྱས                 114
+  དྱ               -> རྒྱ                  109
+  མ                -> ལ                    100
+  གྱི              -> གྱིས                  90
+  དུ               -> ཏུ                    89
+  རྕ               -> རྩ                    87
+  བདྱད             -> བརྒྱད                 85
+  སེནཾ             -> སེཾན                  84
+
+
+Wrote:
+  real_error_distribution.csv        1,328 character substitutions
+  real_syllable_substitutions.csv    23,777 syllable substitutions
+
+Use the `frequency` column to weight the corruption script, so the synthetic
+errors occur at the rates actually observed rather than uniformly.
+
+Note the ཌ/གས and ཾ/མ encoding artifact will show up prominently here. Decide
+whether to normalise it out first -- corrupting text to reproduce an encoding
+artifact is probably not what you want.
+

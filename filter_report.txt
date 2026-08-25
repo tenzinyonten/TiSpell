@@ -1,0 +1,79 @@
+Gemini verdicts: 33,000 rows, 33,000 unique targets
+verdict
+correct      22155
+incorrect    10839
+unsure           6
+
+anusvara whitelist: 407 syllable forms (rest treated as Sanskrit and left alone)
+
+========================================================================
+  VALIDATION AND TEST -- COPIED VERBATIM
+========================================================================
+
+  validation
+    rows      : 2,268  ->  2,268
+    sha256[16]: d4888eb26e5df042  ->  d4888eb26e5df042
+    identical : YES
+
+  test
+    rows      : 2,229  ->  2,229
+    sha256[16]: f085a948c7c60a90  ->  f085a948c7c60a90
+    identical : YES
+
+========================================================================
+  TRAIN SPLIT
+========================================================================
+  before             : 43,015
+  flagged by Gemini  : 13,520  (31.4%)
+    of which artifact: 5,149  (38.1% of flagged)  -- KEPT
+    real errors      : 8,371  (61.9% of flagged)  -- DROPPED
+  no verdict         : 4,526  (10.5%)  -- KEPT
+
+  remaining          : 34,644  (80.5%)
+  kept vs. dropping all flagged: +5,149 rows
+
+------------------------------------------------------------------------
+  PER CATEGORY
+------------------------------------------------------------------------
+                           before  artifact_kept  dropped  after drop_rate share_after
+diff_category                                                                         
+syllable_level              21001           2707     4421  16580     21.1%       47.9%
+single_char_substitution    10017            710     1651   8366     16.5%       24.1%
+large_rewrite                5881           1341     1051   4830     17.9%       13.9%
+single_char_insert_delete    3811            265      626   3185     16.4%        9.2%
+punctuation_only             2303            126      621   1682     27.0%        4.9%
+multi_edit                      2              0        1      1     50.0%        0.0%
+
+========================================================================
+  WROTE
+========================================================================
+
+  dataset/ocr_annotation/exports/hf_differing_filtered/train.csv       34,644 rows
+  dataset/ocr_annotation/exports/hf_differing_filtered/validation.csv  unchanged
+  dataset/ocr_annotation/exports/hf_differing_filtered/test.csv        unchanged
+
+  Originals in dataset/ocr_annotation/exports/hf_differing/ untouched.
+  Integrity check: PASS
+
+  Text is written in its ORIGINAL encoding, not normalised, so train stays
+  consistent with val and test.
+
+  Run with:
+    python train.py --device cuda:0 --epochs 15 \
+        --learning_rate 2e-5 --dropout 0.2 --use_wandb \
+        --data_path dataset/ocr_annotation/exports/hf_differing_filtered/
+
+========================================================================
+  INTERPRETING THE RESULT
+========================================================================
+
+  Two things change at once: target quality and training set size. If F1
+  moves, that alone does not say which caused it. A size-matched random
+  control run is what separates them.
+
+  Gemini coverage is ~65%, so the kept set mixes verified-correct and
+  unverified rows. Cleaner than the original, not clean.
+
+  Validation still contains flagged targets. Scoring against imperfect
+  references caps the achievable number regardless of how good the model is.
+
