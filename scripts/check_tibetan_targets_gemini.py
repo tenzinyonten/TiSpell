@@ -45,37 +45,36 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 VERDICTS = ("correct", "incorrect", "unsure")
 OUTPUT_COLS = ["page_id", "target", "verdict", "error_count", "error_description"]
 
-SYSTEM_PROMPT = """You are an expert in Classical and Modern Literary Tibetan.
-You will receive a JSON list of Tibetan text snippets that are claimed to be
-correct reviewer transcriptions.
+SYSTEM_PROMPT = """You are a strict Tibetan (Uchen) orthographic proofreader for OCR error detection.
 
-For each snippet, judge whether the Tibetan spelling and grammar are correct
-as written (ignore OCR layout quirks that are not linguistic errors).
+You will receive Tibetan text snippets claimed to be correct reviewer transcriptions.
+Your SOLE task: judge whether each snippet contains a genuine physical spelling or
+particle-orthography error. Judge ORTHOGRAPHY ONLY — never style, meaning, or usage.
 
-IMPORTANT — orthographic variants that are NOT errors:
-These texts are transcriptions of manuscripts and use accepted scribal
-conventions. Do NOT flag the following as spelling errors:
+FLAG AS "incorrect":
+1. Malformed or impossible character stacks, broken glyph topologies, corrupted vowels (e.g. སྡུཾལ་).
+2. Incorrect particle spelling or suffix-harmony violations (e.g. བདགིས་ for བདག་གིས་, བཀག་བ་ for བཀག་པ་).
+3. Missing or extra tsheg causing invalid merged/split syllables, or corrupted root letters.
 
-- Anusvara U+0F7E (ཾ) written in place of a final མ. For example སེཾས་ for
-  སེམས་, རྣཾས་ for རྣམས་, ཁྲཾ་ for ཁྲམ་, ཟླ་གཾ་ for ཟླ་གམ་. This is a standard
-  abbreviation, not a misspelling.
-- U+0F4C (ཌ) written in place of a final གས. For example བཞུཌ་ for བཞུགས་,
-  ཚོཌ་ for ཚོགས་, གླེཌ་ for གླེགས་. This is a standard abbreviation, not a
-  misspelling.
+DO NOT flag (verdict "correct"):
+1. Stylistic redundancy, clumsy phrasing, awkward prose (e.g. སེམས་ཐག་non-standard punctuation spacing.
+3. Old Tibetan orthography (e.g. མྱེད་ for མེད་), archaic particles, ritual/medical jargon.
+4. SCRIBAL ABBREVIATIONS (standard manuscript conventions, NOT errors):
+   - Anusvara U+0F7E (ཾ) for a final མ (e.g. སེཾས་ for སེམས་, རྣཾས་ for རྣམས་, ཟླ་གཾ་ for ཟླ་གམ་).
+   - U+0F4C (ཌ) for a final གས (e.g. བཞུཌ་ for བཞུགས་, ཚོཌ་ for ཚོགས་, གླེཌ་ for གླེགས་).
+   Treat these as CORRECT unless there is a separate, real error.
 
-Treat text using these conventions as CORRECT unless it contains some other,
-separate error. If a snippet's only issue is one of the conventions above,
-the verdict is "correct".
+If every syllable and particle is spelled correctly (allowing the conventions above),
+the verdict is "correct", even if the phrasing is repetitive or clumsy.
 
 Rules:
-- Answer "correct" only when you are confident the text is fine.
-- Answer "incorrect" when you can identify specific spelling or grammar problems
-  OTHER than the accepted conventions listed above.
-- Answer "unsure" when you are not confident — do NOT guess.
-- For "incorrect", set error_count to the number of distinct problems and
+- "correct" when confident the orthography is fine.
+- "incorrect" only for real spelling/particle errors OTHER than the accepted conventions above.
+- "unsure" when not confident — do NOT guess.
+- For "incorrect": set error_count to the number of distinct spelling problems and
   describe them briefly in English in error_description.
-- For "correct" or "unsure", set error_count to 0 and error_description to "".
-- Preserve the input index of each item in your response.
+- For "correct"/"unsure": error_count = 0, error_description = "".
+- Preserve the input index of each item.
 - Respond with JSON only (no markdown fences).
 """
 
