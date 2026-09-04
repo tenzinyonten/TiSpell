@@ -125,3 +125,45 @@ class TiSpell_RoBERTa_FC1(nn.Module):
         logit = logit_c + logit_s
         return logit, logit_c
     
+
+class DownStreamerH(nn.Module):
+    def __init__(self, hidden_size, output_size):
+        super().__init__()
+        self.fc1 = nn.Linear(hidden_size, hidden_size)
+        self.act = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, output_size)
+    def forward(self, x):
+        return self.fc2(self.act(self.fc1(x)))
+
+
+class TiSpell_RoBERTa_CopyGate(nn.Module):
+    def __init__(self, model_name, tokenizer, dropout=None):
+        super().__init__()
+        config = AutoConfig.from_pretrained(model_name)
+        if dropout is not None:
+            config.hidden_dropout_prob = dropout
+            config.attention_probs_dropout_prob = dropout
+        config.output_hidden_states = True
+        self.roberta = AutoModelForCausalLM.from_pretrained(
+            model_name, config=config, attn_implementation="eager")
+        self.vocab_size = len(tokenizer)
+        self.roberta.resize_token_embeddings(self.vocab_size)
+        self.config = self.roberta.config
+        hidden = self.config.hidden_size
+        self.character_corrector = DownStreamerH(hidden, self.vocab_size)
+        self.syllable_corrector = DownStreamerH(hidden, self.vocab_size)
+        self.copy_gate = nn.Linear(hidden, 1)
+        nn.init.zeros_(self.copy_gate.weight)
+        nn.init.constant_(self.copy_gate.bias, -2.0)
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None):
+        outputs = self.roberta(input_ids, attention_mask=attention_mask,
+                               token_type_ids=token_type_ids)
+        enc = outputs.hidden_states[-1]
+        logit_c = self.character_corrector(enc)
+        logit_s = self.syllable_corrector(enc)
+        logit = logit_c + logit_s
+        alpha = torch.sigmoid(self.copy_gate(enc))
+        copy_bonus = torch.zeros_like(logit)
+        copy_bonus.scatter_(2, input_ids.unsqueeze(-1), 1.0)
+        logit = logit + (1.0 - alpha) * copy_bonus * 8.0
+        return logit, logit_c
