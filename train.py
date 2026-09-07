@@ -12,7 +12,7 @@ from tqdm import tqdm
 from option import parse_args
 from dataloader.ocr_pairs import OCRAnnotationDataset
 from metrics import compute_precision_recall_f1
-from model.tispell_roberta import TiSpell_RoBERTa
+from model.tispell_roberta import TiSpell_RoBERTa, TiSpell_RoBERTa_CopyGate
 
 try:
     import wandb
@@ -74,15 +74,18 @@ def train(args, model, train_loader, optimizer, lr_scheduler, device, pad_id: in
         source_attention_mask = batch["random_corrupt"]["attention_mask"].to(device)
         target_tag_ids = batch["mask"]["input_ids"].to(device)
 
-        log_p, alpha = model(
+        logit, logit_c = model(
             source_input_ids, attention_mask=source_attention_mask
         )
 
-        # Single objective now: the copy gate handles "leave it alone",
-        # so the character head's separate loss is dropped.
-        loss = _mean_token_nll(
-            log_p, target_input_ids, target_attention, pad_id
+        # CopyGate returns raw logits -> cross-entropy. Two-head loss (w_c), v10 recipe.
+        loss = _mean_token_loss(
+            logit, target_input_ids, target_attention, pad_id
         ).mean()
+        loss_c = _mean_token_loss(
+            logit_c, target_tag_ids, target_attention, pad_id
+        ).mean()
+        loss = loss + args.w_c * loss_c
 
         optimizer.zero_grad()
         loss.backward()
@@ -205,7 +208,7 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token
     pad_id = tokenizer.pad_token_id
 
-    model = TiSpell_RoBERTa(args.model_name, tokenizer, dropout=args.dropout)
+    model = TiSpell_RoBERTa_CopyGate(args.model_name, tokenizer, dropout=args.dropout)
     model.to(device)
     print(
         f"Encoder dropout: hidden={model.config.hidden_dropout_prob}  "
