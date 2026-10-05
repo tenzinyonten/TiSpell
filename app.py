@@ -16,6 +16,7 @@ model.to(device).eval()
 
 SYLLABLE_RUN = re.compile(r"([^་།\s]+་)\1{2,}")
 CHAR_RUN = re.compile(r"(.)\1{2,}")
+SHAD_GAP = re.compile("།(?![།\\s\"'”’»)\\]」』])(?=\\S)")
 
 EXAMPLES = [
     ["བོད་ཀྱི་སྐད་ཡིག་ནི་ཧ་ཅང་ཡག་པོ་ཡིན།"],
@@ -27,6 +28,7 @@ EXAMPLES = [
 def normalize_tsegs(text: str) -> str:
     text = re.sub(r"\s+་", "་ ", text)
     text = re.sub(r" +", " ", text)
+    text = SHAD_GAP.sub("། ", text)
     return text.strip()
 
 
