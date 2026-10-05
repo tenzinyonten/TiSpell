@@ -10,7 +10,7 @@ MODEL_ID = "BDRC/tibetan-byt5-v12b"
 TOKEN = os.environ.get("HF_TOKEN")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, token=TOKEN)
+tokenizer = AutoTokenizer.from_pretrained("google/byt5-small")
 model = T5ForConditionalGeneration.from_pretrained(MODEL_ID, token=TOKEN)
 model.to(device).eval()
 
