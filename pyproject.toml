@@ -8,11 +8,12 @@ version = "0.1.0"
 description = "Tibetan spell checker built on BDRC/tibetan-byt5-v12b, with a CLI and a REST API."
 requires-python = ">=3.9"
 dependencies = [
-    "transformers",
     "torch",
-    "tqdm",
+    "transformers",
+    "sentencepiece",
     "fastapi",
     "uvicorn",
+    "tqdm",
 ]
 
 [project.optional-dependencies]

@@ -10,6 +10,10 @@ loaded from `google/byt5-small`. CUDA is used when available.
 
     pip install -e .
 
+This installs only the runtime packages and takes torch unpinned, so you get
+a build that matches your CUDA. Do not install from `requirements.txt`, it is
+the training file and pins `torch==2.4.1+cu118`.
+
 ## Python
 
     from tibetan_spellcheck import correct
