@@ -24,6 +24,12 @@ EXAMPLES = [
 ]
 
 
+def normalize_tsegs(text: str) -> str:
+    text = re.sub(r"\s+་", "་ ", text)
+    text = re.sub(r" +", " ", text)
+    return text.strip()
+
+
 def collapse_repeats(text):
     text = SYLLABLE_RUN.sub(r"\1", text)
     return CHAR_RUN.sub(r"\1", text)
@@ -38,14 +44,14 @@ def correct_chunk(chunk):
 
 
 def correct(text):
-    parts = re.split(r"(།+)", text)
+    parts = re.split(r"(།+)", normalize_tsegs(text))
     result = []
     for part in parts:
         if not part.strip() or part.startswith("།"):
             result.append(part)
             continue
         result.append(collapse_repeats(correct_chunk(part)))
-    return "".join(result)
+    return normalize_tsegs("".join(result))
 
 
 demo = gr.Interface(
