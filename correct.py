@@ -8,7 +8,7 @@ tok = AutoTokenizer.from_pretrained("google/byt5-small")
 m = T5ForConditionalGeneration.from_pretrained(
     MODEL_ID, token=os.environ.get("HF_TOKEN")).to(DEVICE).eval()
 
-CHUNKS = re.compile(r"[^\n།]*།+|[^\n།]+|\n")
+CHUNKS = re.compile(r"[^།]*།+|[^།]+")
 VOWEL_FIX = {"འཾ": "འི", "འྀ": "འི"}
 
 def normalize(text):
@@ -32,11 +32,26 @@ def correct_chunk(chunk, device):
                          repetition_penalty=1.1, early_stopping=True)
     return tok.decode(out[0], skip_special_tokens=True).replace(" ", "")
 
-def correct(texts, device=DEVICE, normalize_output=True):
+SHAD_AFTER = re.compile("།(?![།\\s\"'”’»)\\]」』])(?=\\S)")
+
+def space_after_shad(text):
+    return SHAD_AFTER.sub("། ", text)
+
+def correct_line(line, device):
+    parts = [c if not c.strip() else correct_chunk(c, device)
+             for c in CHUNKS.findall(line)]
+    return "".join(parts)
+
+def correct(texts, device=DEVICE, normalize_output=True, add_shad_space=False):
     results = []
     for text in texts:
-        parts = [c if c == "\n" or not c.strip() else correct_chunk(c, device)
-                 for c in CHUNKS.findall(text)]
-        out = "".join(parts)
-        results.append(normalize(out) if normalize_output else out)
+        lines = []
+        for line in text.split("\n"):
+            out = correct_line(line, device)
+            if normalize_output:
+                out = normalize(out)
+            if add_shad_space:
+                out = space_after_shad(out)
+            lines.append(out)
+        results.append("\n".join(lines))
     return results
