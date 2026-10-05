@@ -1,7 +1,7 @@
 """Gradio demo for the BDRC/tibetan-byt5-v12b spell checker."""
 import gradio as gr
 
-from correct import MODEL_ID, correct
+from tibetan_spellcheck import MODEL_ID, correct
 
 EXAMPLES = [
     ["བོད་ཀྱི་སྐད་ཡིག་ནི་ཧ་ཅང་ཡག་པོ་ཡིན།", False],

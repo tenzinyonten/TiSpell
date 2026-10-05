@@ -1,12 +1,10 @@
-import os, re, torch
-from transformers import AutoTokenizer, T5ForConditionalGeneration
+import re
+
+import torch
+
+from .model import DEVICE, get_model
 
 TSHEG = "\u0f0b"
-MODEL_ID = "BDRC/tibetan-byt5-v12b"
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-tok = AutoTokenizer.from_pretrained("google/byt5-small")
-m = T5ForConditionalGeneration.from_pretrained(
-    MODEL_ID, token=os.environ.get("HF_TOKEN")).to(DEVICE).eval()
 
 CHUNKS = re.compile(r"[^།]*།+|[^།]+")
 VOWEL_FIX = {"འཾ": "འི", "འྀ": "འི"}
@@ -25,6 +23,7 @@ def normalize(text):
     return text
 
 def correct_chunk(chunk, device):
+    tok, m = get_model()
     enc = tok(chunk, return_tensors="pt").to(device)
     cap = int(len(chunk.encode("utf-8")) * 1.5)
     with torch.no_grad():

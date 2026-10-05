@@ -1,107 +1,44 @@
-# TiSpell: A Semi-Masked Methodology for Tibetan Spelling Correction
+# tibetan-spellcheck
 
-**📄 Paper**: _TiSpell: A Semi-Masked Methodology for Tibetan Spelling Correction covering Multi-Level Error with Data Augmentation_
+Tibetan spell checker built on [BDRC/tibetan-byt5-v12b](https://huggingface.co/BDRC/tibetan-byt5-v12b).
+One model load, three ways in: Python, command line, REST API.
 
-**🧑‍💻 Author**: Yutong Liu, Xiao Feng, Ziyue Zhang, Yongbin Yu*, Cheng Huang, Fan Gao, Xiangxiang Wang*, Ban Ma-bao, Manping Fan, Thupten Tsering, Gadeng Luosang, Renzeng Duojie, Nyima Tashi
+The model is private. Set `HF_TOKEN` before the first run. The tokenizer is
+loaded from `google/byt5-small`. CUDA is used when available.
 
-**📦 Repository**: Official implementation of TiSpell.
+## Install
 
----
+    pip install -e .
 
-## 🧠 Overview
+## Python
 
-**TiSpell** is a Tibetan spelling correction algorithm specifically designed for multi-level orthographic errors. It proposes a **semi-masked methodology** that jointly models character-level, syllable-level, and word-level errors. With integrated data augmentation strategies, TiSpell improves robustness and accuracy in real-world spelling correction tasks. It leverages pre-trained language models and introduces an end-to-end correction architecture.
+    from tibetan_spellcheck import correct
+    correct(["ཀ་ཁ།"], add_shad_space=False)
 
----
+## Command line
 
-## ✨ Features
+    tibetan-spellcheck input.txt -o output.txt
+    tibetan-spellcheck --text "ཇི་བཞིན་..."
+    tibetan-spellcheck input.txt --add-shad-space
 
-- ✅ Handles character-, syllable-, and word-level spelling errors
-- ✅ Combines semi-masked modeling with structural reconstruction
-- ✅ Includes multiple data augmentation techniques (perturbation, phonetic substitution, etc.)
-- ✅ Fully compatible with Huggingface Transformers for easy integration and customization
+The input can be any length. Line breaks are kept, so the output has the same
+number of lines. A line that fails is copied through unchanged and listed in
+the summary. A progress bar shows while it runs.
 
----
+## REST API
 
-## 🗂️ Project Structure
-```
-TiSpell/
-├── dataloader/ # Data loading utilities
-├── dataset/ # Preprocessed and raw datasets
-├── images/ # Visualizations
-├── model/ # Model architecture
-├── pretrained_models/ # Checkpoints and pre-trained weights
-├── scripts/ # Training and evaluation scripts
-├── LICENSE
-├── README.md
-├── compute_parameter.py # Parameter counting utility
-├── data_analysis.py # Exploratory data analysis
-├── infer.py # Inference script
-├── metrics.py # Evaluation metrics
-├── option.py # Argument parsing
-├── plot.py # Visualization utilities
-├── train.py # Training script
-└── requirements.txt # Python dependencies
-```
+    uvicorn tibetan_spellcheck.api:app --host 0.0.0.0 --port 8000
 
----
+    curl -X POST localhost:8000/correct -H 'Content-Type: application/json' \
+         -d '{"text": "ཀ་ཁ།", "add_shad_space": false}'
+    # {"corrected": "..."}
 
-## 🚀 Quick Start
+`GET /health` returns the model id and device. The model loads once at startup.
 
-### 🔧 1. Install Dependencies
+## What correct() does
 
-```bash
-pip install -r requirements.txt
-```
-### 📁 2. Prepare Dataset
-Download the Tibetan News Classification dataset from [Huggingface](https://huggingface.co/datasets/UTibetNLP/tibetan_news_classification) and place it under the dataset/ directory. Ensure that the dataset is formatted in the following structure:
-```
-TiSpell/
-└── dataset/
-    └── tibetan_news_classification/
-        ├── 政务类
-        ├── 教育类
-        ├── 文化类
-        ├── 旅游类
-        ├── 时政类
-        ├── 民生类
-        ├── 法律类
-        ├── 科技类
-        ├── 经济类
-        └── 艺术类
-            ├── 0.txt
-            ├── 1.txt
-            ├── 2.txt
-            └── ...
-```
-
-
-### 🏋️‍♂️ 3. Train the Model
-```
-python main.py
-```
-
-## ⚙️ Configuration
-You can customize training and evaluation parameters in option.py, including:
-+ Learning rate / Batch size
-+ Training epochs
-+ Weight decay
-
-
-
-## 📌 Citation
-If you find TiSpell helpful in your research, please cite our work:
-```
-@misc{liu2025tispellsemimaskedmethodologytibetan,
-      title={TiSpell: A Semi-Masked Methodology for Tibetan Spelling Correction covering Multi-Level Error with Data Augmentation}, 
-      author={Yutong Liu and Feng Xiao and Ziyue Zhang and Yongbin Yu and Cheng Huang and Fan Gao and Xiangxiang Wang and Ma-bao Ban and Manping Fan and Thupten Tsering and Cheng Huang and Gadeng Luosang and Renzeng Duojie and Nyima Tashi},
-      year={2025},
-      eprint={2505.08037},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2505.08037}, 
-}
-```
-
-## 📝 License
-This project is licensed under the MIT License. See the LICENSE file for more details.
+Each line is split on shad, each piece is corrected on its own (3 beams,
+repetition penalty 1.1, `max_new_tokens` = 1.5 times the piece's UTF-8 bytes),
+then a small normalizer runs: runs of 3 or more repeated syllables become 2,
+and `འཾ` and `འྀ` become `འི`. `add_shad_space` adds one space after a shad
+that is directly followed by text. It is off by default.
