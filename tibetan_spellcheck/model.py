@@ -20,5 +20,6 @@ def get_model():
             tok = AutoTokenizer.from_pretrained(TOKENIZER_ID)
             model = T5ForConditionalGeneration.from_pretrained(
                 MODEL_ID, token=os.environ.get("HF_TOKEN")).to(DEVICE).eval()
+            model.generation_config.max_length = None
             _loaded = (tok, model)
     return _loaded
