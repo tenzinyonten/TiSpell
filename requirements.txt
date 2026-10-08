@@ -11,3 +11,6 @@ torch==2.4.1+cu118
 tqdm==4.67.0
 transformers==4.46.1
 wandb==0.19.11
+gradio>=4.44
+fastapi
+uvicorn

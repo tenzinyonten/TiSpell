@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tibetan-spellcheck"
+version = "0.1.0"
+description = "Tibetan spell checker built on BDRC/tibetan-byt5-v12b, with a CLI and a REST API."
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "transformers",
+    "sentencepiece",
+    "fastapi",
+    "uvicorn",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+demo = ["gradio>=4.44"]
+
+[project.scripts]
+tibetan-spellcheck = "tibetan_spellcheck.cli:main"
+
+[tool.setuptools]
+packages = ["tibetan_spellcheck"]
