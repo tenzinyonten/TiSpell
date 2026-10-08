@@ -10,7 +10,7 @@ MODEL_ID = "BDRC/tibetan-byt5-v12b"
 TOKEN = os.environ.get("HF_TOKEN")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, token=TOKEN)
+tokenizer = AutoTokenizer.from_pretrained("google/byt5-small")
 model = T5ForConditionalGeneration.from_pretrained(MODEL_ID, token=TOKEN)
 model.to(device).eval()
 
@@ -33,21 +33,35 @@ def collapse_repeats(text):
 
 def correct_chunk(chunk):
     input_ids = tokenizer(chunk, return_tensors="pt").input_ids.to(device)
-    max_new_tokens = int(input_ids.shape[1] * 1.5)
+    # Keep decode length near the input so the model cannot pad the
+    # chunk with extra syllables (len*1.5 was enough room to hallucinate).
+    # +2 still produced དང་པ; *1.1 stopped that on short chunks.
+    n = input_ids.shape[1]
+    max_new_tokens = max(1, int(n * 1.1))
     with torch.no_grad():
         out = model.generate(input_ids, max_new_tokens=max_new_tokens)
     return tokenizer.decode(out[0], skip_special_tokens=True)
 
 
-def correct(text):
-    parts = re.split(r"(།+)", text)
+def correct_line(line):
+    parts = re.split(r"(།+)", line)
     result = []
-    for part in parts:
+    for i, part in enumerate(parts):
         if not part.strip() or part.startswith("།"):
             result.append(part)
             continue
-        result.append(collapse_repeats(correct_chunk(part)))
+        corrected = collapse_repeats(correct_chunk(part))
+        nxt = parts[i + 1] if i + 1 < len(parts) else ""
+        if nxt.startswith("།"):
+            corrected = corrected.rstrip("།")
+        result.append(corrected)
     return "".join(result)
+
+
+def correct(text):
+    # Split on lines first so paragraph breaks survive; shad-split only
+    # inside each line, then rejoin with the original newlines.
+    return "\n".join(correct_line(line) for line in text.split("\n"))
 
 
 demo = gr.Interface(
