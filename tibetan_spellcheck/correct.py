@@ -7,6 +7,8 @@ from .model import DEVICE, get_model
 TSHEG = "\u0f0b"
 
 CHUNKS = re.compile(r"[^།]*།+|[^།]+")
+SYLLABLES = re.compile(r"[^་]*་|[^་]+")
+MAX_CHUNK_CHARS = 160
 VOWEL_FIX = {"འཾ": "འི", "འྀ": "འི"}
 
 def normalize(text):
@@ -23,6 +25,23 @@ def normalize(text):
     return text
 
 BATCH_SIZE = 32
+
+def split_long(chunk, limit=MAX_CHUNK_CHARS):
+    """Split a chunk longer than limit on tsheg into sub-chunks of at most
+    limit characters. Each tsheg stays with the syllable before it, so the
+    pieces join back to the original chunk exactly. A single syllable longer
+    than limit is left whole."""
+    if len(chunk) <= limit:
+        return [chunk]
+    out, cur = [], ""
+    for syl in SYLLABLES.findall(chunk):
+        if cur and len(cur) + len(syl) > limit:
+            out.append(cur)
+            cur = ""
+        cur += syl
+    if cur:
+        out.append(cur)
+    return out
 
 def max_new_tokens_for(chunk):
     return int(len(chunk.encode("utf-8")) * 1.5)
@@ -73,7 +92,8 @@ def correct_lines(lines, device=DEVICE, normalize_output=True, add_shad_space=Fa
     """Correct a list of lines. Returns (results, failed): results[i] is the
     corrected line, or the original line if any of its chunks failed, and
     failed lists those line indexes."""
-    pieces = [CHUNKS.findall(line) for line in lines]
+    pieces = [[sub for part in CHUNKS.findall(line) for sub in split_long(part)]
+              for line in lines]
     todo, owner = [], []
     for n, parts in enumerate(pieces):
         for part in parts:
