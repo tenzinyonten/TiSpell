@@ -11,6 +11,15 @@ SYLLABLES = re.compile(r"[^་]*་|[^་]+")
 MAX_CHUNK_CHARS = 160
 VOWEL_FIX = {"འཾ": "འི", "འྀ": "འི"}
 
+def pre_process_text(text):
+    text = re.sub(r'\s+་', '་', text)
+    return re.sub(r'་{2,}', '་', text)
+
+PARTICLE_RE = re.compile(r'([འཱིེོུྲླྣྭ]|གྲྭ)་ཏུ([འ་\s།])')
+
+def post_process_particles(text):
+    return PARTICLE_RE.sub(r'\1་རུ\2', text)
+
 def normalize(text):
     syls, out, i = text.split(TSHEG), [], 0
     while i < len(syls):
@@ -88,11 +97,12 @@ def space_after_shad(text):
     return SHAD_AFTER.sub("། ", text)
 
 def correct_lines(lines, device=DEVICE, normalize_output=True, add_shad_space=False,
-                  batch_size=BATCH_SIZE, progress=None):
+                  batch_size=BATCH_SIZE, progress=None, fix_particles=False):
     """Correct a list of lines. Returns (results, failed): results[i] is the
     corrected line, or the original line if any of its chunks failed, and
     failed lists those line indexes."""
-    pieces = [[sub for part in CHUNKS.findall(line) for sub in split_long(part)]
+    pieces = [[sub for part in CHUNKS.findall(pre_process_text(line))
+               for sub in split_long(part)]
               for line in lines]
     todo, owner = [], []
     for n, parts in enumerate(pieces):
@@ -112,17 +122,20 @@ def correct_lines(lines, device=DEVICE, normalize_output=True, add_shad_space=Fa
         out = "".join(got)
         if normalize_output:
             out = normalize(out)
+        if fix_particles:
+            out = post_process_particles(out)
         if add_shad_space:
             out = space_after_shad(out)
         results.append(out)
     return results, failed
 
 def correct(texts, device=DEVICE, normalize_output=True, add_shad_space=False,
-            batch_size=BATCH_SIZE):
+            batch_size=BATCH_SIZE, fix_particles=False):
     split = [t.split("\n") for t in texts]
     flat = [line for lines in split for line in lines]
     results, failed = correct_lines(flat, device, normalize_output,
-                                    add_shad_space, batch_size)
+                                    add_shad_space, batch_size,
+                                    fix_particles=fix_particles)
     if failed:
         raise RuntimeError(f"{len(failed)} line(s) failed to correct")
     it = iter(results)
