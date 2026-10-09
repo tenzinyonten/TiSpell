@@ -23,11 +23,11 @@ SYLLABLE_RUN = re.compile(r"([^་།\s]+་)\1{2,}")
 CHAR_RUN = re.compile(r"(.)\1{2,}")
 
 EXAMPLES = [
-    ["བཀྲ་ཤིས་ཀྱིས་དཔེ་དེབ་གསར་པ་ཞིགཉོས་བྱུང་།", False],
-    ["གཞོན་སྐྱེས་རྣམས་སློབ་གྲྭ་ཁག་དུ་འགྲོ་བཞིན་ཡོད།", False],
-    ["བོད་གྱི་རིག་གཞུང་ནི་ལོ་ངོ་སྟོང་ཕྲག་མང་པོའི་རིང་ལ་དར་ཞིང་རྒྱས།", False],
-    ["རི་མོ་འདི་ནི་ཤིན་ཏུམཛེས་པོ་ཞིག་འདུག", False],
-    ["བད་ཀྱི་ཐེག་པ་ཆེན་པོའི་ཆོས་སྐཏ་རིགས།", False],
+    ["བཀྲ་ཤིས་ཀྱིས་དཔེ་དེབ་གསར་པ་ཞིགཉོས་བྱུང་།"],
+    ["གཞོན་སྐྱེས་རྣམས་སློབ་གྲྭ་ཁག་དུ་འགྲོ་བཞིན་ཡོད།"],
+    ["བོད་གྱི་རིག་གཞུང་ནི་ལོ་ངོ་སྟོང་ཕྲག་མང་པོའི་རིང་ལ་དར་ཞིང་རྒྱས།"],
+    ["རི་མོ་འདི་ནི་ཤིན་ཏུམཛེས་པོ་ཞིག་འདུག"],
+    ["བད་ཀྱི་ཐེག་པ་ཆེན་པོའི་ཆོས་སྐཏ་རིགས།"],
 ]
 
 
@@ -76,22 +76,24 @@ def run(text, use_botok):
     return corrected
 
 
+text_in = gr.Textbox(label="Input Tibetan text", lines=6)
+botok_box = gr.Checkbox(
+    label="Botok normalization",
+    value=False,
+    interactive=normalize_corpus is not None,
+    info=None if normalize_corpus is not None else "botok is not installed",
+)
+
 demo = gr.Interface(
     fn=run,
-    inputs=[
-        gr.Textbox(label="Input Tibetan text", lines=6),
-        gr.Checkbox(
-            label="Botok normalization",
-            value=False,
-            interactive=normalize_corpus is not None,
-            info=None if normalize_corpus is not None else "botok is not installed",
-        ),
-    ],
+    inputs=[text_in, botok_box],
     outputs=gr.Textbox(label="Corrected text", lines=6),
-    examples=EXAMPLES,
     title="Tibetan spell checker",
     description=f"Model: {MODEL_ID}",
 )
+
+with demo:
+    gr.Examples(examples=EXAMPLES, inputs=[text_in])
 
 if __name__ == "__main__":
     demo.launch(share=True)
