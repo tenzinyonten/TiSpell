@@ -6,6 +6,11 @@ import gradio as gr
 import torch
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 
+try:
+    from botok.utils.corpus_normalization import normalize_corpus
+except ImportError:
+    normalize_corpus = None
+
 MODEL_ID = "BDRC/tibetan-byt5-v12b"
 TOKEN = os.environ.get("HF_TOKEN")
 
@@ -18,11 +23,11 @@ SYLLABLE_RUN = re.compile(r"([^་།\s]+་)\1{2,}")
 CHAR_RUN = re.compile(r"(.)\1{2,}")
 
 EXAMPLES = [
-    ["བཀྲ་ཤིས་ཀྱིས་དཔེ་དེབ་གསར་པ་ཞིགཉོས་བྱུང་།"],
-    ["གཞོན་སྐྱེས་རྣམས་སློབ་གྲྭ་ཁག་དུ་འགྲོ་བཞིན་ཡོད།"],
-    ["བོད་གྱི་རིག་གཞུང་ནི་ལོ་ངོ་སྟོང་ཕྲག་མང་པོའི་རིང་ལ་དར་ཞིང་རྒྱས།"],
-    ["རི་མོ་འདི་ནི་ཤིན་ཏུམཛེས་པོ་ཞིག་འདུག"],
-    ["ཡི་གེ་འདི་དག་གསལ་པོར་ཀློགས།"],
+    ["བཀྲ་ཤིས་ཀྱིས་དཔེ་དེབ་གསར་པ་ཞིགཉོས་བྱུང་།", False],
+    ["གཞོན་སྐྱེས་རྣམས་སློབ་གྲྭ་ཁག་དུ་འགྲོ་བཞིན་ཡོད།", False],
+    ["བོད་གྱི་རིག་གཞུང་ནི་ལོ་ངོ་སྟོང་ཕྲག་མང་པོའི་རིང་ལ་དར་ཞིང་རྒྱས།", False],
+    ["རི་མོ་འདི་ནི་ཤིན་ཏུམཛེས་པོ་ཞིག་འདུག", False],
+    ["བད་ཀྱི་ཐེག་པ་ཆེན་པོའི་ཆོས་སྐཏ་རིགས།", False],
 ]
 
 
@@ -64,9 +69,24 @@ def correct(text):
     return "\n".join(correct_line(line) for line in text.split("\n"))
 
 
+def run(text, use_botok):
+    corrected = correct(text)
+    if use_botok and normalize_corpus is not None:
+        corrected = normalize_corpus(corrected)
+    return corrected
+
+
 demo = gr.Interface(
-    fn=correct,
-    inputs=gr.Textbox(label="Input Tibetan text", lines=6),
+    fn=run,
+    inputs=[
+        gr.Textbox(label="Input Tibetan text", lines=6),
+        gr.Checkbox(
+            label="Botok normalization",
+            value=False,
+            interactive=normalize_corpus is not None,
+            info=None if normalize_corpus is not None else "botok is not installed",
+        ),
+    ],
     outputs=gr.Textbox(label="Corrected text", lines=6),
     examples=EXAMPLES,
     title="Tibetan spell checker",
