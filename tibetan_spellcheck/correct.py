@@ -15,10 +15,27 @@ def pre_process_text(text):
     text = re.sub(r'\s+་', '་', text)
     return re.sub(r'་{2,}', '་', text)
 
-PARTICLE_RE = re.compile(r'([འཱིེོུྲླྣྭ]|གྲྭ)་ཏུ([འ་\s།])')
+SAFE_WHITELIST = {"ཤིན་ཏུ", "ཀུན་ཏུ", "རྟག་ཏུ", "ཡོངས་སུ", "རབ་ཏུ", "མངོན་སུམ"}
 
-def post_process_particles(text):
-    return PARTICLE_RE.sub(r'\1་རུ\2', text)
+GENITIVE_FORM = {}
+for _letters, _form in (("གང", "གི"), ("སདབ", "ཀྱི"), ("ནམརལ", "གྱི")):
+    for _l in _letters:
+        GENITIVE_FORM[_l] = _form
+
+GENITIVE_RE = re.compile(r"([^་།\s]*([གངསདབནམརལ]))་(ཀྱི|གྱི|གི)(ས?)(?=[་།\s]|$)")
+
+def fix_genitive_particles(text):
+    """Replace a wrong genitive/agentive form with the one the preceding
+    syllable's final letter calls for. It only swaps a particle that is already
+    there, and leaves matches that overlap a SAFE_WHITELIST entry alone."""
+    protected = [m.span() for w in SAFE_WHITELIST for m in re.finditer(re.escape(w), text)]
+
+    def swap(m):
+        if any(m.start() < e and s < m.end() for s, e in protected):
+            return m.group(0)
+        return f"{m.group(1)}་{GENITIVE_FORM[m.group(2)]}{m.group(4)}"
+
+    return GENITIVE_RE.sub(swap, text)
 
 def normalize(text):
     syls, out, i = text.split(TSHEG), [], 0
@@ -123,7 +140,7 @@ def correct_lines(lines, device=DEVICE, normalize_output=True, add_shad_space=Fa
         if normalize_output:
             out = normalize(out)
         if fix_particles:
-            out = post_process_particles(out)
+            out = fix_genitive_particles(out)
         if add_shad_space:
             out = space_after_shad(out)
         results.append(out)

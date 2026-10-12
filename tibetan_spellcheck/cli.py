@@ -19,6 +19,8 @@ def parse_args(argv=None):
     p.add_argument("--text", help="correct this string and print the result")
     p.add_argument("--add-shad-space", action="store_true",
                    help="add a space after a shad when text follows it")
+    p.add_argument("--fix-particles", action="store_true", default=False,
+                   help="fix genitive/agentive particles by the preceding letter (experimental)")
     p.add_argument("--batch-size", type=int, default=BATCH_SIZE,
                    help="chunks per generate() call (1 gives the unbatched result)")
     args = p.parse_args(argv)
@@ -32,7 +34,8 @@ def main(argv=None):
     get_model()
 
     if args.text is not None:
-        print(correct([args.text], add_shad_space=args.add_shad_space)[0])
+        print(correct([args.text], add_shad_space=args.add_shad_space,
+                      fix_particles=args.fix_particles)[0])
         return 0
 
     raw = args.input.read_bytes()
@@ -47,7 +50,8 @@ def main(argv=None):
     with tqdm(desc="chunks", unit="chunk") as bar:
         bar.total = sum(1 for l in lines for part in CHUNKS.findall(l) if part.strip())
         out, bad = correct_lines(lines, add_shad_space=args.add_shad_space,
-                                 batch_size=args.batch_size, progress=bar.update)
+                                 batch_size=args.batch_size, progress=bar.update,
+                                 fix_particles=args.fix_particles)
     failed = [n + 1 for n in bad]
     for n in failed[:10]:
         print(f"[warn] line {n} failed, kept as is", file=sys.stderr)

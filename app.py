@@ -25,7 +25,7 @@ demo = gr.Interface(
     inputs=[
         text_in,
         gr.Checkbox(label="Add space after punctuation (།)", value=False),
-        gr.Checkbox(label="Apply rule-based particle fixes (experimental)", value=False),
+        gr.Checkbox(label="Apply rule-based genitive fixes (experimental)", value=False),
     ],
     outputs=gr.Textbox(label="Corrected text", lines=6),
     title="Tibetan Spell Checker",
