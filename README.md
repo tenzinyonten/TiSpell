@@ -36,7 +36,23 @@ dataloader/ocr_pairs.py
 
 scripts/prepare_tispell_data/   # annotator pages → pair CSVs
 scripts/data_prep/              # synthetic corrupt + merge + split → v11
+app.py                          # Gradio demo of the ByT5 checker
+analysis/                       # Botok and particle/over-edit notes
 ```
+
+## Spell checker demo
+
+`app.py` is a Gradio UI over `BDRC/tibetan-byt5-v12b` (set `HF_TOKEN`).
+
+The packaged checker (CLI, REST API, optional genitive rule) lives on the
+`gradio-demo` branch: `tibetan_spellcheck`, plus `analysis/botok_segmentation.md`.
+
+## Notes
+
+- `analysis/manager_followup.md` — why particle errors survive and why correct
+  syllables get swapped (v12b pair stats).
+- `analysis/botok_segmentation.md` — Botok is not a drop-in segmenter for this
+  model; do not use it as an edit gate.
 
 ## Data preparation
 
